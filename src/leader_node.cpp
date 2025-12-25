@@ -19,14 +19,14 @@ using namespace px4_msgs::msg;
 class LeaderNode : public rclcpp::Node {
 public:
 	LeaderNode() : Node("leader_node") {
-		offboard_control_mode_publisher_ = this->create_publisher<OffboardControlMode>("/px4_1/fmu/in/offboard_control_mode", 10);
-		trajectory_setpoint_publisher_ = this->create_publisher<TrajectorySetpoint>("/px4_1/fmu/in/trajectory_setpoint", 10);
-		vehicle_command_publisher_ = this->create_publisher<VehicleCommand>("/px4_1/fmu/in/vehicle_command", 10);
+		offboard_control_mode_publisher_ = this->create_publisher<OffboardControlMode>("/fmu/in/offboard_control_mode", 10);
+		trajectory_setpoint_publisher_ = this->create_publisher<TrajectorySetpoint>("/fmu/in/trajectory_setpoint", 10);
+		vehicle_command_publisher_ = this->create_publisher<VehicleCommand>("/fmu/in/vehicle_command", 10);
 
 		rmw_qos_profile_t qos_profile = rmw_qos_profile_sensor_data;
     	auto qos = rclcpp::QoS(rclcpp::QoSInitialization(qos_profile.history, 5), qos_profile);
 		vehicle_local_positon_sub_ = this->create_subscription<VehicleLocalPosition>
-		("/px4_1/fmu/out/vehicle_local_position_v1", qos, [this](const VehicleLocalPosition msg) {
+		("/fmu/out/vehicle_local_position_v1", qos, [this](const VehicleLocalPosition msg) {
 			local_position_ = msg;
 		});
 
