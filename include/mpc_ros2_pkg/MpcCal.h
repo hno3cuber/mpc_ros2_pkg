@@ -17,7 +17,7 @@ public:
 	void MPCInit();
 	bool MPCSolver(vector<double> ref, VectorXd& sta_local);
 	void ConsCal(SparseMatrix<double>& Acon_sparse, VectorXd& ub, VectorXd sta_local);
-	vector<VectorXd> status_node;
+	vector<VectorXd> sta_node;
 private:
 	double safe_r = 0.25; //��ȫ��Χ
 	double obs_r = 0.5; //�ϰ���뾶
