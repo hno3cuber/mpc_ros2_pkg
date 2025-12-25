@@ -71,6 +71,7 @@ target_link_libraries (leader_node
   Eigen3::Eigen
   osqp::osqp
   OsqpEigen::OsqpEigen
+  Python3::Python
 )
 install (TARGETS
   leader_node
