@@ -48,7 +48,7 @@ void MpcCal::MPCInit() {
 
 }
 
-bool MpcCal::MPCSolver(VectorXd ref, VectorXd& sta_local) {
+bool MpcCal::MPCSolver(vector<double> ref, VectorXd& sta_local) {
 	RowVectorXd f = RowVectorXd::Zero(N*CONNUM);
 	SparseMatrix<double> Acon_sparse;
 	VectorXd ub = VectorXd::Zero(CONSROWNUM);

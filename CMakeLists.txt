@@ -42,6 +42,30 @@ install (TARGETS
   DESTINATION lib/${PROJECT_NAME}
 )
 
+# leader_node
+add_executable (leader_node
+  src/GetRefPath.cpp
+  src/leader_node.cpp
+  src/MpcCal.cpp
+)
+ament_target_dependencies (leader_node
+  rclcpp
+  std_msgs
+  geometry_msgs
+  nav_msgs
+  Eigen3
+  px4_msgs
+)
+target_link_libraries (leader_node
+  Eigen3::Eigen
+  osqp::osqp
+  OsqpEigen::OsqpEigen
+)
+install (TARGETS
+  leader_node
+  DESTINATION lib/${PROJECT_NAME}
+)
+
 install(FILES src/ref.csv
   DESTINATION share/${PROJECT_NAME}/config
 )

@@ -12,7 +12,7 @@ using namespace std;
 class GetRefPath {
 public:
 	GetRefPath(string file_name);
-	bool PathData();
+	bool GetPath();
 	vector<vector<double>> path;
 private:
 	string file_name;
