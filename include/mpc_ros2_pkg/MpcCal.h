@@ -15,7 +15,7 @@ class MpcCal {
 public:
 	MpcCal();
 	void MPCInit();
-	bool MPCSolver(VectorXd ref, VectorXd& sta_local);
+	bool MPCSolver(vector<double> ref, VectorXd& sta_local);
 	void ConsCal(SparseMatrix<double>& Acon_sparse, VectorXd& ub, VectorXd sta_local);
 	vector<VectorXd> status_node;
 private:

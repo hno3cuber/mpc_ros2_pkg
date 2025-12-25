@@ -6,7 +6,7 @@ GetRefPath::GetRefPath(string file_name) {
     cout << "get file:" << file_name << " success" << endl;
 }
 
-bool GetRefPath::PathData() {
+bool GetRefPath::GetPath() {
     ifstream file(file_name);
 
     vector<vector<double>> rawData;

@@ -6,6 +6,7 @@
 #include <rclcpp/rclcpp.hpp>
 #include "mpc_ros2_pkg/MpcCal.h"
 #include <stdint.h>
+#include <ament_index_cpp/get_package_share_directory.hpp>
 
 
 #include <chrono>
@@ -32,16 +33,6 @@ public:
 		offboard_setpoint_counter_ = 0;
 
 		auto timer_callback = [this]() -> void {
-
-			if (abs(local_position_.z) <= 4.5) {
-				PublishOffboardControlMode(true, false);
-				PublishTrajectorSetpoint();
-			}
-			else {
-				PublishOffboardControlMode(true, true);
-				PublishTrajectorSetpoint();
-			}
-
 			if (offboard_setpoint_counter_ == 10) {
 				this->PublishVehicleCommand(VehicleCommand::VEHICLE_CMD_DO_SET_MODE, 1, 6);
 				this->Arm();
@@ -49,6 +40,15 @@ public:
 
 			if (offboard_setpoint_counter_ < 11) {
 				offboard_setpoint_counter_++;
+			}
+
+			if (abs(local_position_.z) <= 4.5) {
+				PublishOffboardControlMode(true, false);
+				TakeOff();
+			}
+			else {
+				PublishOffboardControlMode(true, true);
+				this->MpcFun();
 			}
 
 		};
@@ -69,25 +69,63 @@ private:
 
 	VehicleLocalPosition local_position_{};
 
+    std::string pkg_share = ament_index_cpp::get_package_share_directory("mpc_ros2_pkg");
+    std::unique_ptr<GetRefPath> ref_ptr = std::make_unique<GetRefPath>(pkg_share+"/config/ref.csv");
+	std::unique_ptr<MpcCal> mpc_ptr = std::make_unique<MpcCal>();
+
+	bool is_path_get = ref_ptr->GetPath();
+	vector<vector<double>> path = ref_ptr->path;
+
+	int path_ref_index = 0;
+
+	VectorXd sta_local = VectorXd::Zero(STANUM);
+	Vector2d ref_vel = Vector2d::Zero();
+
+	void GetStaLocal();
+	void MpcFun();
+
 	void Arm();
 	void DisArm();
 
 	void PublishOffboardControlMode(bool pos, bool vel);
-	void PublishTrajectorSetpoint();
-	void PublishTrajectorSetpoint(float vel);
+	void TakeOff();
+	void PublishTrajectorSetpoint(Vector2d ref_vel);
 	void PublishVehicleCommand(uint16_t command, float param1 = 0.0, float param2 = 0.0);
 
 };
 
+void LeaderNode::GetStaLocal() {
+	sta_local(0) = local_position_.x; 
+	sta_local(1) = local_position_.y;
+	sta_local(2) = local_position_.vx;
+	sta_local(3) = local_position_.vy;
+}
+
+void LeaderNode::MpcFun() {
+	if (path.size() == COLS && is_path_get && mpc_ptr->MPCSolver(path[path_ref_index], sta_local) && path_ref_index < path.size()) {
+		this->GetStaLocal();
+		ref_vel(0) = sta_local(2);
+		ref_vel(1) = sta_local(3);
+		PublishTrajectorSetpoint(ref_vel);
+		path_ref_index += 1;
+	}
+	else if (path_ref_index >= path.size()) {
+		RCLCPP_INFO(this->get_logger(), "all point solved, now shutdown");
+		rclcpp::shutdown();
+	}
+	else {
+		RCLCPP_WARN(this->get_logger(), "something wrong, now shutdown");
+		rclcpp::shutdown();
+	}
+}
+
 void LeaderNode::Arm() {
 	PublishVehicleCommand(VehicleCommand::VEHICLE_CMD_COMPONENT_ARM_DISARM, 1.0);
-
 	RCLCPP_INFO(this->get_logger(), "Arm command send");
 }
 
 void LeaderNode::DisArm() {
 	PublishVehicleCommand(VehicleCommand::VEHICLE_CMD_COMPONENT_ARM_DISARM, 0.0);
-
 	RCLCPP_INFO(this->get_logger(), "Disarm command send");
 }
 
@@ -102,7 +140,7 @@ void LeaderNode::PublishOffboardControlMode(bool pos_bl, bool vel_bl) {
 	offboard_control_mode_publisher_->publish(msg);
 }
 
-void LeaderNode::PublishTrajectorSetpoint() {
+void LeaderNode::TakeOff() {
 	TrajectorySetpoint msg{};
 	msg.position = {0.0, 0.0, -5.0};
 	msg.yaw = 0; // [-PI:PI]
@@ -110,10 +148,10 @@ void LeaderNode::PublishTrajectorSetpoint() {
 	trajectory_setpoint_publisher_->publish(msg);
 }
 
-void LeaderNode::PublishTrajectorSetpoint(float vel) {
+void LeaderNode::PublishTrajectorSetpoint(Vector2d ref_vel) {
 	TrajectorySetpoint msg{};
 	msg.position = {std::numeric_limits<float>::quiet_NaN(), std::numeric_limits<float>::quiet_NaN(), -5.0};
-	msg.velocity = {vel, 0.0, 0.0};
+	msg.velocity = {static_cast<float>(ref_vel(0)), static_cast<float>(ref_vel(1)), 0.0};
 	msg.yaw = 0; // [-PI:PI]
 	msg.timestamp = this->get_clock()->now().nanoseconds() / 1000;
 	trajectory_setpoint_publisher_->publish(msg);
@@ -133,7 +171,6 @@ int main(int argc, char *argv[]) {
 	setvbuf(stdout, NULL, _IONBF, BUFSIZ);
 	rclcpp::init(argc, argv);
 	rclcpp::spin(std::make_shared<LeaderNode>());
-
 	rclcpp::shutdown();
 	return 0;
 }

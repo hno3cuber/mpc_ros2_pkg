@@ -15,10 +15,10 @@ class MpcTestNode : public rclcpp::Node {
 public:
 	MpcTestNode() : Node("mpc_test_node") {
 		auto timer_callback = [this]() -> void {
-            if (ref_ptr->PathData()) {
+            if (ref_ptr->GetPath()) {
                 for (int i = 0; i < ref_ptr->path.size(); i++) {
-                    ref[0] = ref_ptr->path[i][0];
-                    ref[1] = ref_ptr->path[i][1];
+                    ref.push_back(ref_ptr->path[i][0]);
+                    ref.push_back(ref_ptr->path[i][1]);
 
                     if (!mpc_ptr->MPCSolver(ref, sta_local)) {
                         RCLCPP_WARN(this->get_logger(), "solve fail, now shutdown");
@@ -45,7 +45,7 @@ private:
     std::unique_ptr<MpcCal> mpc_ptr = std::make_unique<MpcCal>();
 
     VectorXd sta_local = VectorXd::Zero(STANUM);
-    VectorXd ref = VectorXd::Zero(ROWS);
+    vector<double> ref;
     
     int index = 0;
 };
