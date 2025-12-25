@@ -43,16 +43,16 @@ public:
 			}
 
 			if (abs(local_position_.z) <= 4.5) {
-				PublishOffboardControlMode(true, false);
+				PublishOffboardControlMode(true, false, false);
 				TakeOff();
 			}
 			else {
-				PublishOffboardControlMode(true, true);
+				PublishOffboardControlMode(true, true, true);
 				this->MpcFun();
 			}
 
 		};
-		timer_ = this->create_wall_timer(50ms, timer_callback);
+		timer_ = this->create_wall_timer(20ms, timer_callback);
 	}
 private:
 	rclcpp::TimerBase::SharedPtr timer_;
@@ -68,6 +68,7 @@ private:
 	uint64_t offboard_setpoint_counter_;   
 
 	VehicleLocalPosition local_position_{};
+	VehicleLocalPosition last_local_position_{};
 
     std::string pkg_share = ament_index_cpp::get_package_share_directory("mpc_ros2_pkg");
     std::unique_ptr<GetRefPath> ref_ptr = std::make_unique<GetRefPath>(pkg_share+"/config/ref.csv");
@@ -79,7 +80,7 @@ private:
 	int path_ref_index = 0;
 
 	VectorXd sta_local = VectorXd::Zero(STANUM);
-	Vector2d ref_vel = Vector2d::Zero();
+	VectorXd sta_except = VectorXd::Zero(STANUM);
 
 	void GetStaLocal();
 	void MpcFun();
@@ -87,9 +88,9 @@ private:
 	void Arm();
 	void DisArm();
 
-	void PublishOffboardControlMode(bool pos, bool vel);
+	void PublishOffboardControlMode(bool pos_bl, bool vel_bl, bool acc_bl);
 	void TakeOff();
-	void PublishTrajectorSetpoint(Vector2d ref_vel);
+	void PublishTrajectorSetpoint(VectorXd sta_except);
 	void PublishVehicleCommand(uint16_t command, float param1 = 0.0, float param2 = 0.0);
 
 };
@@ -99,14 +100,18 @@ void LeaderNode::GetStaLocal() {
 	sta_local(1) = local_position_.y;
 	sta_local(2) = local_position_.vx;
 	sta_local(3) = local_position_.vy;
+	sta_local(4) = last_local_position_.ax;
+	sta_local(5) = last_local_position_.ay;
+
+	last_local_position_ = local_position_;
 }
 
 void LeaderNode::MpcFun() {
-	if (path.size() == COLS && is_path_get && mpc_ptr->MPCSolver(path[path_ref_index], sta_local) && path_ref_index < path.size()) {
-		this->GetStaLocal();
-		ref_vel(0) = sta_local(2);
-		ref_vel(1) = sta_local(3);
-		PublishTrajectorSetpoint(ref_vel);
+	this->GetStaLocal();
+	sta_except = sta_local;
+	if (path.size() == COLS && is_path_get && path_ref_index < path.size() && mpc_ptr->MPCSolver(path[path_ref_index], sta_except)) {
+
+		PublishTrajectorSetpoint(sta_except);
 		path_ref_index += 1;
 	}
 	else if (path_ref_index >= path.size()) {
@@ -129,11 +134,11 @@ void LeaderNode::DisArm() {
 	RCLCPP_INFO(this->get_logger(), "Disarm command send");
 }
 
-void LeaderNode::PublishOffboardControlMode(bool pos_bl, bool vel_bl) {
+void LeaderNode::PublishOffboardControlMode(bool pos_bl, bool vel_bl, bool acc_bl) {
 	OffboardControlMode msg{};
 	msg.position = pos_bl;
 	msg.velocity = vel_bl;
-	msg.acceleration = false;
+	msg.acceleration = acc_bl;
 	msg.attitude = false;
 	msg.body_rate = false;
 	msg.timestamp = this->get_clock()->now().nanoseconds() / 1000;
@@ -148,10 +153,11 @@ void LeaderNode::TakeOff() {
 	trajectory_setpoint_publisher_->publish(msg);
 }
 
-void LeaderNode::PublishTrajectorSetpoint(Vector2d ref_vel) {
+void LeaderNode::PublishTrajectorSetpoint(VectorXd sta_except) {
 	TrajectorySetpoint msg{};
-	msg.position = {std::numeric_limits<float>::quiet_NaN(), std::numeric_limits<float>::quiet_NaN(), -5.0};
-	msg.velocity = {static_cast<float>(ref_vel(0)), static_cast<float>(ref_vel(1)), 0.0};
+	msg.position = {static_cast<float>(sta_except(0)), static_cast<float>(sta_except(1)), -5.0};
+	msg.velocity = {static_cast<float>(sta_except(2)), static_cast<float>(sta_except(3)), 0.0};
+	msg.acceleration = {static_cast<float>(sta_except(4)), static_cast<float>(sta_except(5)), 0.0};
 	msg.yaw = 0; // [-PI:PI]
 	msg.timestamp = this->get_clock()->now().nanoseconds() / 1000;
 	trajectory_setpoint_publisher_->publish(msg);
