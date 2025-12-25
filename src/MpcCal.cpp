@@ -1,7 +1,7 @@
 #include "mpc_ros2_pkg/MpcCal.h"
 
 MpcCal::MpcCal() {
-	status_node.clear();
+	sta_node.clear();
 	obs_vec.clear();
 	MPCInit();
 }
@@ -84,7 +84,8 @@ bool MpcCal::MPCSolver(vector<double> ref, VectorXd& sta_local) {
 
     if (solver.getStatus() == OsqpEigen::Status::Solved) {
         u_sol = solver.getSolution().segment(0,CONNUM);
-        sta_local = A * sta_local + B * u_sol;
+        sta_local = A*sta_local+B*u_sol;
+		sta_node.push_back(sta_local);
         return true;
     }
 	return false;

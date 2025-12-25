@@ -15,6 +15,16 @@ find_package(std_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(px4_msgs REQUIRED)
+find_package(Python3 COMPONENTS Interpreter Development REQUIRED)
+
+execute_process(
+  COMMAND "${Python3_EXECUTABLE}" -c "import numpy; print(numpy.get_include())"
+  OUTPUT_VARIABLE PYTHON_NUMPY_INCLUDE_DIR
+  OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+
+message(STATUS "Python3 Include: ${Python3_INCLUDE_DIRS}")
+message(STATUS "NumPy Include: ${PYTHON_NUMPY_INCLUDE_DIR}")
 
 include_directories(include)
 
@@ -36,6 +46,7 @@ target_link_libraries (mpc_test_node
   Eigen3::Eigen
   osqp::osqp
   OsqpEigen::OsqpEigen
+  Python3::Python
 )
 install (TARGETS
   mpc_test_node
