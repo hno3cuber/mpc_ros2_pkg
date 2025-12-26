@@ -73,7 +73,6 @@ private:
 	uint64_t offboard_setpoint_counter_;   
 
 	VehicleLocalPosition local_position_{};
-	VehicleLocalPosition last_local_position_{};
 
     std::string pkg_share = ament_index_cpp::get_package_share_directory("mpc_ros2_pkg");
     std::unique_ptr<GetRefPath> ref_ptr = std::make_unique<GetRefPath>(pkg_share+"/config/ref.csv");
@@ -106,10 +105,8 @@ void LeaderNode::GetStaLocal() {
 	sta_local(1) = local_position_.y;
 	sta_local(2) = local_position_.vx;
 	sta_local(3) = local_position_.vy;
-	sta_local(4) = last_local_position_.ax;
-	sta_local(5) = last_local_position_.ay;
-
-	last_local_position_ = local_position_;
+	sta_local(4) = local_position_.ax;
+	sta_local(5) = local_position_.ay;
 }
 
 void LeaderNode::MpcFun() {

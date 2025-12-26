@@ -35,7 +35,7 @@ public:
                 rclcpp::shutdown();
             }
 		};
-		timer_ = this->create_wall_timer(50ms, timer_callback);
+		timer_ = this->create_wall_timer(10ms, timer_callback);
 	}
 private:
 	rclcpp::TimerBase::SharedPtr timer_;
