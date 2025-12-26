@@ -9,18 +9,18 @@ MpcCal::MpcCal() {
 void MpcCal::MPCInit() {
 	MatrixXd tmp = MatrixXd::Identity(N,N);
 
-	A << 1, 0, DT, 0, 0.5 * DTT, 0, 
-		 0, 1, 0, DT, 0, 0.5 * DTT, 
+	A << 1, 0, DT, 0, 0.5*DTT, 0, 
+		 0, 1, 0, DT, 0, 0.5*DTT, 
 		 0, 0, 1, 0, DT, 0, 
 		 0, 0, 0, 1, 0, DT, 
 		 0, 0, 0, 0, 1, 0, 
 		 0, 0, 0, 0, 0, 1;
-	B << 0.5 * DTT, 0,
-		0, 0.5 * DTT,
-		DT, 0,
-		0, DT,
-		1, 0,
-		0, 1;
+	B << 0, 0,
+		 0, 0,
+		 0, 0,
+		 0, 0,
+		 1, 0,
+		 0, 1;
 
 	Q(0, 0) = 10;
 	Q(1, 1) = 10;
