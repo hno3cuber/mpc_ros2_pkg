@@ -4,7 +4,10 @@
 #include <px4_msgs/msg/vehicle_control_mode.hpp>
 #include <px4_msgs/msg/vehicle_local_position.hpp>
 #include <rclcpp/rclcpp.hpp>
+
 #include "mpc_ros2_pkg/MpcCal.h"
+#include "mpc_ros2_pkg/matplotlibcpp.h" 
+
 #include <stdint.h>
 #include <ament_index_cpp/get_package_share_directory.hpp>
 
@@ -15,6 +18,8 @@
 using namespace std::chrono;
 using namespace std::chrono_literals;
 using namespace px4_msgs::msg;
+
+namespace plt = matplotlibcpp;
 
 class LeaderNode : public rclcpp::Node {
 public:
@@ -68,7 +73,6 @@ private:
 	uint64_t offboard_setpoint_counter_;   
 
 	VehicleLocalPosition local_position_{};
-	VehicleLocalPosition last_local_position_{};
 
     std::string pkg_share = ament_index_cpp::get_package_share_directory("mpc_ros2_pkg");
     std::unique_ptr<GetRefPath> ref_ptr = std::make_unique<GetRefPath>(pkg_share+"/config/ref.csv");
@@ -84,6 +88,7 @@ private:
 
 	void GetStaLocal();
 	void MpcFun();
+	void DrawTra();
 
 	void Arm();
 	void DisArm();
@@ -100,10 +105,8 @@ void LeaderNode::GetStaLocal() {
 	sta_local(1) = local_position_.y;
 	sta_local(2) = local_position_.vx;
 	sta_local(3) = local_position_.vy;
-	sta_local(4) = last_local_position_.ax;
-	sta_local(5) = last_local_position_.ay;
-
-	last_local_position_ = local_position_;
+	sta_local(4) = local_position_.ax;
+	sta_local(5) = local_position_.ay;
 }
 
 void LeaderNode::MpcFun() {
@@ -115,6 +118,7 @@ void LeaderNode::MpcFun() {
 		path_ref_index += 1;
 	}
 	else if (path_ref_index >= path.size()) {
+		this->DrawTra();
 		RCLCPP_INFO(this->get_logger(), "all point solved, now shutdown");
 		rclcpp::shutdown();
 	}
@@ -122,6 +126,37 @@ void LeaderNode::MpcFun() {
 		RCLCPP_WARN(this->get_logger(), "something wrong, now shutdown");
 		rclcpp::shutdown();
 	}
+}
+
+void LeaderNode::DrawTra() {
+	vector<double> x;
+	vector<double> y;
+
+	size_t size = ref_ptr->path.size();
+
+	x.reserve(size);
+	y.reserve(size);
+
+	plt::figure_size(1200, 700);
+
+	for (size_t i = 0; i < size; i++) {
+		x.push_back(ref_ptr->path[i][0]);
+		y.push_back(ref_ptr->path[i][1]);
+	}
+
+	plt::plot(x, y, "k--");
+
+	x.clear();
+	y.clear();
+
+	for (size_t i = 0;i < size; i++) {
+		x.push_back(mpc_ptr->sta_node[i][0]);
+		y.push_back(mpc_ptr->sta_node[i][1]);
+	}
+
+	plt::plot(x, y, "r-");
+
+	plt::show();
 }
 
 void LeaderNode::Arm() {

@@ -6,7 +6,8 @@ constexpr auto STANUM = 6; //状态数量
 constexpr auto CONNUM = 2; //输入数量
 
 constexpr auto DT = 0.01;
-constexpr auto DTT = DT * DT;
+constexpr auto DTT = DT*DT;
+constexpr auto DTTT = DT*DT*DT;
 
 constexpr auto COLS = 803;
 constexpr auto ROWS = 2;
